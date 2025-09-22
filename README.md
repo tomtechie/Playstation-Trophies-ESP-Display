@@ -65,7 +65,7 @@ Using secrets avoids storing sensitive info directly in the YAML.
 
 ## Step 4: Download Arial Font
 
-1. Download Arial.ttf.
+1. Download [**Arial.ttf.**](https://github.com/talving/Playstation-Trophies-ESP-Display/blob/main/ARIAL.TTF) 
 2. Place it in /config/esphome/fonts/ in Home Assistant.
 3. This allows ESPHome to render the text on the OLED.
 
