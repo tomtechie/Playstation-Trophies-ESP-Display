@@ -1,8 +1,332 @@
 # 🎮 Playstation Trophies ESP Display
 
-Display your Playstation trophies on an SSD1306 OLED using an ESP32-C3 and Home Assistant.
+
+<img width="4284" height="3213" alt="TrophyMainPic" src="https://github.com/user-attachments/assets/9f1f2633-c41e-4688-9b73-ae9e0469ad37" />
+
+
+## [**3D model files can be found on MakerWorld**](https://makerworld.com/en/@tomtechie) 
+
+### This project shows your PlayStation trophy stats on a small ESP32-C3 with an SSD1306 OLED display.
+
+There are currently two versions of the project:
+
+
+
+Home Assistant version → Uses an API and switches between two screens of information.  
+More stable, recommended.
+
+
+
+Arduino IDE version → Runs standalone, shows all info on a single screen.  
+Eligibility Requirement: PSN Trophy Leaders does not include every PSN user. To be listed on their site, your profile must meet at least one of these conditions:  
+- Be level 30 or higher  
+- Have earned at least 1 platinum trophy  
+- Have earned at least 100 trophies
+
+If you do not meet these criteria, you must register manually on their site before your account can be added.
+
+ 
+---
+ 
+
+
+The Home Assistant version cycles through two clean, minimalistic screens showing your stats.
+<img width="2780" height="908" alt="Untitled-1" src="https://github.com/user-attachments/assets/b8deaa27-dc2c-4930-b2fd-f9685d3b7a70" />
+
+
+The Arduino IDE version condenses everything into one screen for quick viewing.
+<img width="1468" height="1043" alt="IMG_5114" src="https://github.com/user-attachments/assets/2ea13a59-7e0d-451f-8021-481aa72e979a" />
+
+
+
 
 ---
+
+## Installation
+
+
+## Arduino IDE Steps
+<details>
+  <summary>🟢 Arduino IDE Installation</summary>
+
+
+  ## Step 0: What You Need
+
+| Item | Notes |
+|------|-------|
+| ESP32-C3 DevKit | Development board with USB-C |
+| SSD1306 OLED 128x64 | I2C display |
+| USB-C cable | For flashing |
+| Computer with Arduino IDE installed | Arduino IDE Programming|
+| Playstation Network account | For trophy data |
+
+---
+
+## Step 1: Wiring the OLED to ESP32-C3
+
+
+
+| ESP32-C3  | → | SSD1306 OLED |
+|------|-------|-------|
+|------|-------|-------|
+|GPIO 8|→|SDA|
+|GPIO 9|→|SCL|
+|GND|→|GND|
+|3.3V|→|VCC|
+
+<img width="539" height="709" alt="SchematicForTrophy" src="https://github.com/user-attachments/assets/7b5961bb-f3f5-489b-9dac-5ca03852029c" />
+
+---
+
+## Step 2: Arduino IDE Installation
+
+- Download and install [**Arduino IDE**](https://www.arduino.cc/en/software/)
+
+
+- In Arduino IDE, go to File → Preferences → add this URL to Additional Board Manager URLs:
+```url
+https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+```
+  Then open Tools → Board → Board Manager, search for ESP32, and click Install.
+
+
+- Plug your ESP32-C3 into your computer with a USB cable.
+- Then in Arduino IDE, go to Tools → Board and select ESP32C3 Dev Module.
+- Copy & paste the following code into a new sketch in Arduino IDE:
+
+
+```ino
+/* PSNTrophyLeaders scraper on ESP32-C3 (ssd1306 display)
+   - Fetches https://psntrophyleaders.com/user/view/<user>#games
+   - Extracts total + platinum/gold/silver/bronze
+   - Displays on 0.96" SSD1306
+   - Sets hostname to PlaystationTrophiesESP
+   - Shows "WiFi!" in top-right if not connected
+   NOTE: Uses WiFiClientSecure.setInsecure() for TLS.
+*/
+
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+// === CONFIG ===
+const char* WIFI_SSID = "YOUR_WIFI";                     // CHange to your Wi-Fi name
+const char* WIFI_PASS = "YOUR_PASSWORD";                 // Change to your Wi-Fi password
+const char* PSNPROFILE_USER = "YOUR_PSN_USERNAME";       // change to your PSN username
+const unsigned long FETCH_INTERVAL_MS = 10UL * 60UL * 1000UL; // 10 minutes
+
+#define I2C_SDA_PIN 8
+#define I2C_SCL_PIN 9
+
+// ===== Helpers to parse HTML =====
+
+// Extract the nth <big>…</big> value (0 = platinum, 1 = gold, 2 = silver, 3 = bronze)
+String getBigValue(String& data, int nth) {
+  int idx = -1;
+  for (int i = 0; i <= nth; i++) {
+    idx = data.indexOf("<big>", idx + 1);
+    if (idx == -1) return "--";
+  }
+  int start = idx + 5;
+  int end = data.indexOf("</big>", start);
+  if (end == -1) return "--";
+  String val = data.substring(start, end);
+  val.trim();
+  return val;
+}
+
+// Extract total from "Trophies (5615)"
+long extractTotal(const String& html) {
+  int pos = html.indexOf("Trophies (");
+  if (pos < 0) return -1;
+  int start = pos + 10;
+  int end = html.indexOf(")", start);
+  if (end < 0) return -1;
+  String num = html.substring(start, end);
+  num.replace(",", "");
+  return num.toInt();
+}
+
+// fetch page via HTTPS (insecure TLS) and return HTML string
+String fetchProfileHtml(const char* user) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("No WiFi, skipping fetch");
+    return String();
+  }
+  String host = "psntrophyleaders.com";
+  String url = String("/user/view/") + user + "#games";
+  WiFiClientSecure client;
+  client.setInsecure(); // Accept any cert
+  HTTPClient https;
+  String full = String("https://") + host + url;
+  if (!https.begin(client, full)) {
+    Serial.println("HTTPS begin failed");
+    return String();
+  }
+  https.setUserAgent("esp-trophy-counter/1.0");
+  int code = https.GET();
+  String payload = "";
+  if (code == HTTP_CODE_OK) {
+    payload = https.getString();
+  } else {
+    Serial.printf("HTTP error: %d\n", code);
+  }
+  https.end();
+  return payload;
+}
+
+// Helper: format large numbers with "K" (used only for G/S/B)
+String formatK(String val) {
+  val.replace(",", "");       // remove commas
+  long n = val.toInt();
+  if (n >= 10000) {
+    long k = (n + 500) / 1000; // round to nearest K
+    return String(k) + "K";
+  }
+  return val;
+}
+
+void drawDisplay(long total, String plat, String gold, String silver, String bronze, bool wifiOK) {
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  // === Header ===
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.print("PSN: ");
+  display.println(PSNPROFILE_USER);
+
+  // WiFi indicator
+  if (!wifiOK) {
+    display.setCursor(SCREEN_WIDTH - 30, 0);
+    display.print("WiFi!");
+  }
+
+  // Full-width separator line
+  display.drawLine(0, 10, SCREEN_WIDTH, 10, SSD1306_WHITE);
+
+  // === Total trophies (big number, full number) ===
+  String sTot = (total >= 0) ? String(total) : String("--");
+  int size = 3;
+  if (sTot.length() >= 5) size = 2;  // shrink if too long
+  display.setTextSize(size);
+  int16_t x1, y1;
+  uint16_t w, h;
+  display.getTextBounds(sTot, 0, 0, &x1, &y1, &w, &h);
+  display.setCursor((SCREEN_WIDTH - w) / 2, 16);
+  display.print(sTot);
+
+  // === Platinum centered below total (full number) ===
+  display.setTextSize(1);
+  String platText = "Plat:" + plat;
+  display.getTextBounds(platText, 0, 0, &x1, &y1, &w, &h);
+  display.setCursor((SCREEN_WIDTH - w) / 2, 40);
+  display.print(platText);
+
+  // === Gold / Silver / Bronze all in one centered line (K format if >10k) ===
+  String row = "G:" + formatK(gold) + " S:" + formatK(silver) + " B:" + formatK(bronze);
+  display.getTextBounds(row, 0, 0, &x1, &y1, &w, &h);
+  display.setCursor((SCREEN_WIDTH - w) / 2, 54);
+  display.print(row);
+
+  display.display();
+}
+
+void connectWiFi() {
+  if (WiFi.status() == WL_CONNECTED) return;
+  Serial.printf("Connecting to %s", WIFI_SSID);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < 10000) {
+    delay(300);
+    Serial.print(".");
+  }
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.printf("\nConnected, IP: %s, Hostname: %s\n",
+                  WiFi.localIP().toString().c_str(),
+                  WiFi.getHostname());
+  } else {
+    Serial.println("\nWiFi connect failed.");
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+  display.display();
+
+  // Set custom hostname BEFORE WiFi.begin()
+  WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
+  WiFi.setHostname("PlaystationTrophiesESP");
+
+  connectWiFi();
+  drawDisplay(-1, "--", "--", "--", "--", WiFi.status() == WL_CONNECTED);
+}
+
+unsigned long lastFetch = 0;
+long cachedTotal = -1;
+String cachedPlat = "--", cachedGold = "--", cachedSilver = "--", cachedBronze = "--";
+
+void loop() {
+  connectWiFi();
+
+  unsigned long now = millis();
+  if (now - lastFetch >= FETCH_INTERVAL_MS || lastFetch == 0) {
+    lastFetch = now;
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("Fetching PSNTrophyLeaders...");
+      String html = fetchProfileHtml(PSNPROFILE_USER);
+      if (html.length() > 0) {
+        cachedTotal = extractTotal(html);
+        cachedPlat = getBigValue(html, 0);
+        cachedGold = getBigValue(html, 1);
+        cachedSilver = getBigValue(html, 2);
+        cachedBronze = getBigValue(html, 3);
+
+        Serial.printf("Parsed: total=%ld plat=%s gold=%s silver=%s bronze=%s\n",
+                      cachedTotal, cachedPlat.c_str(), cachedGold.c_str(),
+                      cachedSilver.c_str(), cachedBronze.c_str());
+      } else {
+        Serial.println("Fetch failed or empty HTML - keeping old values");
+      }
+    }
+  }
+
+  drawDisplay(cachedTotal, cachedPlat, cachedGold, cachedSilver, cachedBronze,
+              WiFi.status() == WL_CONNECTED);
+
+  delay(500);
+}
+
+```
+
+- Replace the following placeholders:
+  - **`YOUR_WIFI`**
+  - **`YOUR_PASSWORD`**
+  - **`YOUR_PSN_USERNAME`**
+
+- Upload the code to your ESP32C3
+- Done
+
+</details>
+
+
+## Home Assistant Steps
+<details>
+  <summary>🔵 Home Assistant Installation</summary>
+
+
 
 ## Step 0: What You Need
 
@@ -263,4 +587,9 @@ Remove the **`#`** from the **`manual IP`** and set the settings according to yo
     dns1: 192.168.1.1
     dns2: 8.8.8.8
 ```
+
+
+</details>
+
+
 
