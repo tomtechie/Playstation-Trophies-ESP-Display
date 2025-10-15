@@ -319,6 +319,15 @@ void loop() {
 - Upload the code to your ESP32C3
 - Done
 
+
+### Having issues?
+
+Try the following:
+
+- Is [**PSNTrophyLeaders**](https://psntrophyleaders.com) up?
+- Try another username, for example try the top players username.
+- Create a issue or send me a message on MakerWorld.
+
 </details>
 
 
