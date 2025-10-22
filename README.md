@@ -45,7 +45,7 @@ The Arduino IDE version condenses everything into one screen for quick viewing.
 ## Installation
 
 
-## Arduino IDE Steps
+## Arduino IDE Steps (Currently experiencing issues)
 <details>
   <summary>🟢 Arduino IDE Installation</summary>
 
