@@ -8,6 +8,328 @@
 
 ### This project shows your PlayStation trophy stats on a small ESP32-C3 with an SSD1306 OLED display.
 
+It fetches data from the Pocket PSN API, renders configurable screens, and hosts a built-in web app for setup. Your trophies, levels, ranks, completion stats, and playtime are automatically kept up to date.
+<br>
+[**PSN stats powered by Pocket PSN**](https://pocketpsn.com)
+
+
+![PlaystationTrophySmall](https://github.com/user-attachments/assets/8bf40507-f3a0-4008-b8cb-e7d806f2b8a6)
+
+
+## 🎮 What It Does
+
+💡 Displays detailed PlayStation stats on a 0.96" SSD1306 (128×64) OLED display.
+Customize which metrics to show and how they’re arranged.
+
+| Metric | Description |
+|:--|:--|
+| 👤 **Username** | Your PSN display name |
+| 🌍 **Country** | Country code (SE, US, etc.) |
+| 🆙 **PSN Level** | Current PlayStation account level |
+| ➕ **PS Plus** | Whether the account has PS Plus |
+| 🏆 **Platinum / Gold / Silver / Bronze** | Trophy counts |
+| 🏅 **Total Trophies** | Total earned across all games |
+| 🔢 **Trophy Points (TP)** | PSN trophy score |
+| 🔷 **Pocket Points (PP)** | PocketPSN scoring system |
+| 🎮 **Total Games** | Total games associated with account |
+| 🌐 **World Rank** | Global rank on PocketPSN |
+| 🇨🇴 **Country Rank** | Rank within your country |
+| 📈 **Level Progress** | Percent toward next PSN level |
+| ⏭️ **Next Level** | Points needed to reach next level |
+| ✔️ **Completed Games** | Based on PocketPSN Quick Stats |
+| 📊 **Completion Average** | Avg. completion across games |
+| 🎯 **Average Rarity** | Avg. trophy rarity |
+| ❌ **Unearned Trophies** | Remaining trophies not yet earned |
+| ⏱️ **Playtime** | Total hours played |
+
+<br>
+
+ ## ⚙️ Features & Configuration
+
+ <img width="513" height="893" alt="Screenshot 2025-12-06 at 16 17 30" src="https://github.com/user-attachments/assets/40958af6-78c3-40ba-9716-9f8e1903cbe9" />
+
+
+
+### 🖥️ Configurable Screens (up to 10)
+- Enable or disable each **metric** individually  
+- Assign metrics to specific **screens** *(1–10)*  
+- Choose **placement** *(1–4 vertical slots)*  
+- Select **text size** *(Default / Big)*  
+- Customize **screen titles/names**  
+- Set a global **rotation interval** *(minimum 8 seconds)*  
+
+---
+
+### 🌐 Configuration via Built-in Web UI
+- Enter your **PSN Username** directly from the browser  
+- Manage screens, metrics, and rotation timing  
+- View current **Wi-Fi SSID**, **IP address**, and **signal strength (RSSI)
+- Customize names for each screen
+
+
+---
+
+### 🧠 Smart Achievement Scanning
+- Automatically refreshes every **30 minutes**
+- Updates all **PocketPSN** Quick Stats 
+
+
+---
+
+### 📶 Dual-Mode Networking (AP + STA)
+- If Wi-Fi isn’t configured, the ESP starts a **setup network** automatically  
+- Connect to `PSTrophy_Setup` and open **http://192.168.4.1/ui** to enter Wi-Fi credentials  
+- After a successful connection, the access point shuts off and the device joins your main network  
+
+---
+
+### 💾 Persistent Storage
+- All configuration saved in **LittleFS** (`/config.json`)  
+- Device only needs internet for PocketPSN updates; otherwise runs offline
+
+
+
+---
+
+  ## What You Need
+
+| Item | Notes |
+|------|-------|
+| 3D Model | [Download](https://makerworld.com/en/models/1860047-playstation-trophy-display) |
+| ESP32-C3 DevKit |  [Development board with USB-C](https://amzn.to/4gY8C6z)|
+| SSD1306 OLED 128x64 | [I2C display](https://amzn.to/4mPmWiW) |
+| USB-C cable | For flashing & Power |
+| Playstation user | [Pocket PSN](https://pocketpsn.com/) |
+| Latest software version | [Releases](https://github.com/tomtechie/Playstation-Trophies-ESP-Display/releases)  |
+
+
+
+---
+
+
+## Step 1: Wiring the OLED to ESP32-C3
+
+
+| ESP32-C3  | → | SSD1306 OLED |
+|------|-------|-------|
+|GPIO 8|→|SDA|
+|GPIO 9|→|SCL|
+|GND|→|GND|
+|3.3V|→|VCC|
+
+<img width="767" height="546" alt="Schematic" src="https://github.com/user-attachments/assets/d0ffa1a1-ca50-4732-a0c4-b6b2e8f641da" />
+
+Either solder the cables in place, or preferably use female jumper wires that can be easily connected to the pins on each component.
+[**Recommended cables**](https://amzn.to/4qunIVA) 
+
+
+---
+
+
+## Step 2: Install/Flash ESP
+
+1. Download the latest version of the software: [**Releases**](https://github.com/tomtechie/Playstation-Trophies-ESP-Display/releases) 
+2. Go to: https://esptool.spacehuhn.com
+3. Plug in your ESP32-C3 via USB
+4. Click on CONNECT and select the correct port (e.g. COM5)
+
+
+> ⚙️ Tip:
+>On certain ESP32-C3 models, flashing requires manual boot activation.
+>Keep BOOT pressed during USB connection and release it once communication with the device is established.
+>
+> If you are seeing multiple "locations" to put the .Bin file on this is most likely due to the ESP32-C3 having a program already installed, To fix this remove all "locations" and then click erase. Once the erase is done you can add the .Bin file. 
+
+ 
+5. Click on **SELECT**
+    → Select your PlaystationTrophy.bin
+6. Click **Program** and the software will be installed
+---
+
+## Step 3: Configuration
+
+1. **Power the device.**
+
+  > If no Wi-Fi is configured, it starts a setup network:
+  > * SSID: `PSTrophy_Setup`
+  > * PASS: `PSN12345`
+  > * IP: `192.168.4.1`
+>
+
+2. **Connect from your phone or laptop** to `PSTrophy_Setup`.
+
+3. **Open** **`http://192.168.4.1/ui`** in your browser.
+   Enter your home Wi-Fi **SSID** and **Password** → **Save & Connect**.
+
+4. The device attempts to join your Wi-Fi:
+
+   * On success, the setup AP shuts off.
+   * The OLED briefly shows “Connected!” and the **local IP**.
+
+5. On your normal Wi-Fi, open a browser to the device’s IP (shown on OLED or your router’s device list). (e.g., `http://192.168.1.42/`)  
+You’ll see the full **Playstation Trophy** configuration UI.
+
+
+
+
+
+
+
+
+
+---
+
+## Step 4: Configuring the display (on-device Web UI)
+
+Open the device’s IP in a browser (e.g., `http://192.168.1.42/`).
+
+1. **Connection panel**
+
+   * Paste your **PSN Username**
+   * Set **Screen rotation interval** (8 seconds minimum)
+   * Choose **Number of screens** (1–10)
+   * Edit **Screen names** (titles)
+
+2. **Metrics table**
+
+   * For each metric:
+
+     * **Enabled**: toggle on/off
+     * **Screen**: which screen (1–10) it appears on
+     * **Placement (1–4)**: vertical slot (top → bottom)
+     * **Text Size**: Default or Big
+   * The OLED draws a screen **title** + line, then the metrics in slot order.
+     If text won’t fit, the UI trims intelligently.
+
+3. Click **Save & Reboot**.
+   The configuration is saved to `/config.json`, the device reboots, and your layout is live.
+
+4. **Wi-Fi Info** section shows the current SSID/IP/RSSI.
+
+
+---
+
+## Troubleshooting
+
+* **Web UI doesn’t open**
+
+  * Make sure you’re on the **same network** as the device.
+  * Try re-powering the device; watch the OLED for the **IP** splash.
+  * If you can’t reach it, hold the device button/reset into **setup** state (or erase `/config.json`) so it starts the AP mode again and visit `http://192.168.4.1/ui`.
+
+* **iOS - Can't access setup UI**
+
+  * iOS often has Private IP-address activated which causes issues. When you have connected to the `PSTrophy_Setup` Wi-Fi click on the `i` next to the Wi-Fi → Private Wi-Fi-adress → Off.  
+  You should now be able to access `http://192.168.4.1/ui`
+
+
+## FAQ
+
+
+<details>
+  <summary> Technical information </summary>
+
+## How/when data updates
+
+* **Fetch cycle**: Every **30 minutes** (if online), the device sends a POST request to the Pocket PSN endpoint:
+
+  * `Username` → PSN display name
+  * `Country` → Country code
+  * `PSN Level` + `Level Progress` + `Level Remaining`
+  * `Trophies` → Platinum / Gold / Silver / Bronze / Total
+  * `Trophy Points (TP)` and Pocket Points (PP)
+  * `Total Games`
+  * `World Rank` and `Country Rank`
+  * `Quick Stats` containing:
+  * *  `Completed Games`
+  * *  `Completion Average`
+  * *  `Average Rarity`
+  * *  `Unearned Trophies`
+  * *  `Hours Played`
+  * **Quick Stats handling:**
+  * * Parsed directly from the PocketPSN `"Quick Stats"` array.
+  * * No achievement scanning is done locally; all stats come from PocketPSN.
+
+
+
+
+---
+
+## Networking behavior
+
+* **Normal mode (STA)**:
+  Joins your Wi-Fi and serves the full UI at `http://<device-ip>/`.
+* **Setup mode (AP+STA)**:
+  If no creds are saved or STA can’t connect, it also starts an AP:
+
+  * **SSID:** `PSTrophy_Setup`
+  * **Password:** `PSN12345`
+  * Visit `http://192.168.4.1/ui` to enter Wi-Fi credentials.
+  * **On success:** The AP shuts off and the device switches to STA-only mode..
+
+> There’s **no captive portal** (intentionally), because phone OS captive sheets can be flaky. You always browse to the **exact IP**.
+
+---
+
+## Files & persistence
+
+* **Config**: `/config.json` (LittleFS)
+
+
+
+Stores:
+* Wi-Fi SSID & password
+* PSN username
+* Screen count and screen names
+* All metric enable/disable settings
+* Placement (1–4) and text size
+* Rotation interval
+
+
+## Security notes
+
+* Your Wi-Fi credentials and PSN username are stored locally inside /config.json on LittleFS.
+* The web UI is exposed only on your LAN or setup AP.
+* For extra security:
+
+
+  * Isolate it on an IoT VLAN.
+  * Restrict access using firewall rules
+  * Avoid exposing it to the internet
+
+
+
+</details>
+
+### Having issues?
+
+Try the following:
+
+- Check the Troubleshooting & FAQ
+- Create a issue or send me a message on MakerWorld.
+
+</details>
+
+
+
+
+
+<br>
+
+
+
+## Non API Version
+<details>
+  # 🎮 Playstation Trophies ESP Display
+
+
+<img width="4284" height="3213" alt="TrophyMainPic" src="https://github.com/user-attachments/assets/9f1f2633-c41e-4688-9b73-ae9e0469ad37" />
+
+
+## [**3D model files can be found on MakerWorld**](https://makerworld.com/en/@tomtechie) 
+
+### This project shows your PlayStation trophy stats on a small ESP32-C3 with an SSD1306 OLED display.
+
 There are currently two versions of the project:
 
 
@@ -605,6 +927,13 @@ Remove the **`#`** from the **`manual IP`** and set the settings according to yo
 
 
 </details>
+
+
+
+
+
+</details>
+
 
 
 
